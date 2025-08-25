@@ -1,110 +1,151 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useRef } from 'react'
+import { api, SimulationParams, SimulationResults } from '../services/api'
 import { motion } from 'framer-motion'
-import { 
-  Download, 
-  Play, 
-  Sliders, 
-  MapPin, 
-  Thermometer, 
-  Droplets, 
-  Zap 
-} from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
-
-interface SimulationParams {
-  scenario: string
-  treeCover: number
-  albedo: number
-  populationDensity: number
-  rainfall: number
-  windSpeed: number
-  tideLevel: number
-}
-
-interface SimulationResults {
-  temperatureDelta: { hour: number; value: number }[]
-  inundationArea: { hour: number; value: number }[]
-  energyData: { hour: number; demand: number; supply: number }[]
-  peakTempReduction: number
-  waterloggingRisk: string
-  energyBalance: number
-}
+import { Play, Sliders, MapPin, Thermometer, Droplets } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  LineChart,
+  AreaChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Line,
+  Area
+} from 'recharts'
 
 const Simulation: React.FC = () => {
   const [params, setParams] = useState<SimulationParams>({
     scenario: 'heatwave',
     treeCover: 30,
-    albedo: 0.3,
-    populationDensity: 75,
-    rainfall: 20,
-    windSpeed: 15,
-    tideLevel: 1.2
+    albedo: 0.2,
+    populationDensity: 50,
+    rainfall: 10,
+    windSpeed: 10,
+    humidity: 50,
+    aqi: 50
   })
-
   const [results, setResults] = useState<SimulationResults | null>(null)
   const [isRunning, setIsRunning] = useState(false)
+  const reportRef = useRef<HTMLDivElement | null>(null)
 
   const scenarios = [
     { id: 'heatwave', name: 'Heatwave', icon: Thermometer },
     { id: 'flash_flood', name: 'Flash Flood', icon: Droplets },
     { id: 'cyclone', name: 'Cyclone', icon: MapPin },
-    { id: 'sea_level_surge', name: 'Sea-Level Surge', icon: Droplets }
+    { id: 'sea_level_surge', name: 'Sea Level', icon: Droplets }
   ]
 
-  const runSimulation = () => {
+  const runSimulation = async () => {
     setIsRunning(true)
-    // Simulate API call delay
-    setTimeout(() => {
-      const mockResults: SimulationResults = {
-        temperatureDelta: Array.from({ length: 24 }, (_, i) => ({
-          hour: i,
-          value: Math.sin(i * Math.PI / 24) * 5 * (params.treeCover / 100)
-        })),
-        inundationArea: Array.from({ length: 24 }, (_, i) => ({
-          hour: i,
-          value: Math.max(0, Math.sin(i * Math.PI / 24) * 300 * (params.rainfall / 100))
-        })),
-        energyData: Array.from({ length: 24 }, (_, i) => ({
-          hour: i,
-          demand: 100 + Math.sin(i * Math.PI / 24) * 50,
-          supply: 80 + Math.sin(i * Math.PI / 24) * 40 * (params.albedo * 2)
-        })),
-        peakTempReduction: 3.2 * (params.treeCover / 100),
-        waterloggingRisk: params.rainfall > 50 ? 'High' : params.rainfall > 25 ? 'Medium' : 'Low',
-        energyBalance: 15 * (params.albedo * 2)
+    try {
+      const res = await api.runSimulation(params)
+
+      // normalize time series data: support either number[] or {hour,value}[]
+      const normalize = (arr: any[]) => {
+        if (!arr || !arr.length) return []
+        if (typeof arr[0] === 'number') return arr.map((v: number, i: number) => ({ hour: i, value: Math.round(v * 10) / 10 }))
+        if (typeof arr[0] === 'object' && 'hour' in arr[0] && 'value' in arr[0]) return arr.map((o: any) => ({ hour: o.hour, value: Math.round(o.value * 10) / 10 }))
+        return arr
       }
-      setResults(mockResults)
+
+      const normalized: SimulationResults = {
+        temperatureDelta: normalize(res.temperatureDelta) as unknown as any,
+        inundationArea: normalize(res.inundationArea) as unknown as any,
+        aqiData: normalize(res.aqiData) as unknown as any,
+        humidityData: normalize(res.humidityData) as unknown as any,
+        maxTemperature: Math.round(res.maxTemperature * 10) / 10,
+        maxInundation: Math.round(res.maxInundation * 10) / 10,
+        maxAQI: Math.round(res.maxAQI),
+        maxHumidity: Math.round(res.maxHumidity),
+        waterloggingRisk: res.waterloggingRisk
+      }
+
+      setResults(normalized)
+    } catch (err) {
+      console.error('Simulation failed', err)
+      alert('Simulation failed; check server logs.')
+    } finally {
       setIsRunning(false)
-    }, 2000)
-  }
-
-  const exportToPDF = () => {
-    // Stub function for PDF export
-    alert('PDF export functionality would be implemented here')
-  }
-
-  useEffect(() => {
-    if (results) {
-      // Re-run simulation when parameters change
-      runSimulation()
     }
-  }, [params])
+  }
+
+  const exportReport = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8000/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      })
+      // If server returns an error JSON (e.g., missing dependency), surface it
+      const ct = res.headers.get('content-type') || ''
+      if (ct.includes('application/json')) {
+        const payload = await res.json()
+        const msg = payload?.message || 'Server returned an error while generating the PDF.'
+        alert(msg)
+        return
+      }
+      if (!res.ok) throw new Error('Report generation failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `simulation-report-${params.scenario}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+      alert('Failed to download report from server')
+    }
+  }
+
+  // Simulation is run only when the user clicks the "Run Simulation" button.
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Climate Simulation
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Test different scenarios and parameters to see their impact on urban climate resilience
-          </p>
+    <div className="min-h-screen bg-white dark:bg-gray-900 p-8">
+      <div className="max-w-6xl mx-auto">
+  <div ref={reportRef} className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
+              Urban Climate Simulation
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              Explore the impact of climate scenarios and urban parameters on city resilience.
+            </p>
+          </div>
+          <div className="flex flex-col items-end">
+            {results && (
+              <div className="flex gap-4">
+                <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg px-4 py-2 text-center">
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{Math.round(results.maxTemperature)}°C</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Max Temp</div>
+                </div>
+                <div className="bg-green-100 dark:bg-green-900/30 rounded-lg px-4 py-2 text-center">
+                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{Math.round(results.maxInundation)} km²</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Max Inundation</div>
+                </div>
+                <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg px-4 py-2 text-center">
+                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{Math.round(results.maxAQI)}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Max AQI</div>
+                </div>
+                <div className="bg-cyan-100 dark:bg-cyan-900/30 rounded-lg px-4 py-2 text-center">
+                  <div className="text-lg font-bold text-cyan-700 dark:text-cyan-400">{Math.round(results.maxHumidity)}%</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Max Humidity</div>
+                </div>
+                <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg px-4 py-2 text-center">
+                  <div className="text-lg font-bold text-purple-700 dark:text-purple-400">{results.waterloggingRisk}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300">Waterlogging</div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Controls */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Controls */}
+          <div className="space-y-8">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -114,7 +155,6 @@ const Simulation: React.FC = () => {
                 <Sliders className="mr-2" size={20} />
                 Scenario & Parameters
               </h2>
-
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -140,14 +180,15 @@ const Simulation: React.FC = () => {
                     })}
                   </div>
                 </div>
-
+                {/* Parameter sliders */}
                 {[
                   { id: 'treeCover', label: 'Tree Cover %', min: 0, max: 100, value: params.treeCover },
                   { id: 'albedo', label: 'Albedo', min: 0.1, max: 0.9, step: 0.1, value: params.albedo },
                   { id: 'populationDensity', label: 'Population Density %', min: 10, max: 100, value: params.populationDensity },
                   { id: 'rainfall', label: 'Rainfall (mm/hr)', min: 0, max: 100, value: params.rainfall },
                   { id: 'windSpeed', label: 'Wind Speed (km/h)', min: 0, max: 100, value: params.windSpeed },
-                  { id: 'tideLevel', label: 'Tide Level (m)', min: 0, max: 5, step: 0.1, value: params.tideLevel }
+                  { id: 'humidity', label: 'Humidity (%)', min: 0, max: 100, value: params.humidity },
+                  { id: 'aqi', label: 'Air Quality Index', min: 0, max: 500, value: params.aqi }
                 ].map((param) => (
                   <div key={param.id}>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -168,7 +209,6 @@ const Simulation: React.FC = () => {
                   </div>
                 ))}
               </div>
-
               <button
                 onClick={runSimulation}
                 disabled={isRunning}
@@ -184,75 +224,83 @@ const Simulation: React.FC = () => {
                 )}
               </button>
             </motion.div>
-
-            {/* KPI Badges */}
-            {results && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
-              >
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Simulation Results
-                </h2>
-                
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {results.peakTempReduction.toFixed(1)}°C
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Peak temp reduction</div>
-                  </div>
-                  
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {results.waterloggingRisk}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Waterlogging risk</div>
-                  </div>
-                  
-                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {results.energyBalance.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">Energy balance</div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={exportToPDF}
-                  className="w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-3 px-4 rounded-lg transition-colors mt-4 flex items-center justify-center"
-                >
-                  <Download className="mr-2" size={20} />
-                  Download Simulation Report (PDF)
-                </button>
-              </motion.div>
-            )}
           </div>
 
-          {/* Right Column - Results */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Map Panel */}
+          {/* Impact Visualization & Charts */}
+          <div className="md:col-span-2 space-y-8">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-xl border border-gray-100 dark:border-gray-700"
             >
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                 Impact Visualization
               </h2>
-              <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <MapPin size={48} className="mx-auto mb-2" />
-                  <p>Interactive map visualization would appear here</p>
-                  <p className="text-sm">Showing {params.scenario.replace('_', ' ')} impact</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                <div className="flex flex-col items-center md:items-start md:col-span-1">
+                  <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/30">
+                    {params.scenario === 'heatwave' && <Thermometer size={84} className="text-red-500" />}
+                    {params.scenario === 'flash_flood' && <Droplets size={84} className="text-blue-500" />}
+                    {params.scenario === 'cyclone' && <MapPin size={84} className="text-green-500" />}
+                    {params.scenario === 'sea_level_surge' && <Droplets size={84} className="text-cyan-500" />}
+                  </div>
+
+                  <div className="mt-4 w-full md:w-48 space-y-2">
+                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
+                      <div className="text-sm text-gray-700 dark:text-gray-300">Max Temp</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxTemperature) + '°C' : '—'}</div>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
+                      <div className="text-sm text-gray-700 dark:text-gray-300">Inundation</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxInundation) + ' km²' : '—'}</div>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
+                      <div className="text-sm text-gray-700 dark:text-gray-300">AQI</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxAQI) : '—'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <p className="text-lg text-gray-700 dark:text-gray-300">
+                    {results ? (
+                      params.scenario === 'heatwave' ?
+                        `Peak ${Math.round(results.maxTemperature)}°C with AQI ${Math.round(results.maxAQI)} and humidity around ${Math.round(results.maxHumidity)}%.` :
+                        params.scenario === 'flash_flood' ?
+                        `Maximum inundation estimated at ${Math.round(results.maxInundation)} km². Waterlogging risk: ${results.waterloggingRisk}.` :
+                        params.scenario === 'cyclone' ?
+                        `Expected strong winds (see input) and local impacts. AQI: ${Math.round(results.maxAQI)}.` :
+                        `Estimated inundation ${Math.round(results.maxInundation)} km² with RH ${Math.round(results.maxHumidity)}%.`
+                    ) : (
+                      'Run the simulation to see an impact summary and quick recommendations.'
+                    )}
+                  </p>
+
+                  <div className="mt-4">
+                    <div className="text-sm text-gray-500">Resilience indicator</div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2 overflow-hidden">
+                      <div
+                        className="h-3 bg-gradient-to-r from-yellow-400 to-red-600"
+                        style={{ width: `${results ? Math.min(100, Math.round(results.maxTemperature)) : 6}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-2">
+                      <span>Low</span>
+                      <span>High</span>
+                    </div>
+                  </div>
+
+                        <div className="mt-6 flex gap-3">
+                          <button className="px-4 py-2 bg-blue-600 text-white rounded-md">View recommendations</button>
+                          <button onClick={exportReport} className="px-4 py-2 bg-white border border-gray-200 dark:bg-gray-900 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-md">Export report PDF</button>
+                        </div>
                 </div>
               </div>
             </motion.div>
 
             {/* Charts */}
             {results && (
-              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -311,38 +359,53 @@ const Simulation: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
                 >
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <Zap className="mr-2" size={20} />
-                    Energy Demand vs Supply
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Air Quality Index (AQI)
                   </h2>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={results.energyData}>
+                      <LineChart data={results.aqiData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="hour" />
                         <YAxis />
                         <Tooltip />
-                        <Area 
+                        <Line 
                           type="monotone" 
-                          dataKey="demand" 
-                          stackId="1" 
-                          stroke="#EF4444" 
-                          fill="#EF4444" 
-                          fillOpacity={0.3} 
+                          dataKey="value" 
+                          stroke="#F59E42" 
+                          strokeWidth={2} 
                         />
-                        <Area 
-                          type="monotone" 
-                          dataKey="supply" 
-                          stackId="1" 
-                          stroke="#10B981" 
-                          fill="#10B981" 
-                          fillOpacity={0.3} 
-                        />
-                      </AreaChart>
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </motion.div>
-              </>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
+                >
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    Humidity
+                  </h2>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={results.humidityData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="hour" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="#06B6D4" 
+                          strokeWidth={2} 
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </div>
         </div>

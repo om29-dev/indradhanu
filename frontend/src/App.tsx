@@ -1,4 +1,4 @@
-import React from 'react'
+// React import not required with new JSX transform
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Layout/Navbar'
 import { ToastContainer } from './components/UI/Toast'

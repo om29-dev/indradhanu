@@ -36,29 +36,85 @@ const AnimatedParticles: React.FC = () => {
   )
 }
 
-const CityGrid: React.FC = () => {
-  const buildings = new Array(50).fill(0).map(() => ({
-    position: [
-      (Math.random() - 0.5) * 15,
-      0,
-      (Math.random() - 0.5) * 15,
-    ],
-    height: Math.random() * 2 + 0.5,
-  }))
 
+
+
+
+
+const Tree: React.FC<{ position: [number, number, number] }> = ({ position }) => (
+  <group position={position}>
+    {/* Trunk */}
+    <mesh position={[0, 0.5, 0]}>
+      <cylinderGeometry args={[0.12, 0.12, 1, 8]} />
+      <meshStandardMaterial color="#2563eb" />
+    </mesh>
+    {/* Foliage */}
+    <mesh position={[0, 1.1, 0]}>
+      <sphereGeometry args={[0.45, 14, 14]} />
+      <meshStandardMaterial color="#22c55e" />
+    </mesh>
+  </group>
+)
+
+const Cloud: React.FC<{ position: [number, number, number] }> = ({ position }) => (
+  <group position={position}>
+    <mesh>
+      <sphereGeometry args={[0.5, 12, 12]} />
+      <meshStandardMaterial color="#e0e7ff" />
+    </mesh>
+    <mesh position={[0.6, 0.1, 0]}>
+      <sphereGeometry args={[0.3, 12, 12]} />
+      <meshStandardMaterial color="#e0e7ff" />
+    </mesh>
+    <mesh position={[-0.5, -0.1, 0]}>
+      <sphereGeometry args={[0.25, 12, 12]} />
+      <meshStandardMaterial color="#e0e7ff" />
+    </mesh>
+  </group>
+)
+
+const Sun: React.FC = () => (
+  <mesh position={[0, 5, -5]}>
+    <sphereGeometry args={[1, 16, 16]} />
+    <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={0.7} />
+  </mesh>
+)
+
+const Water: React.FC = () => (
+  <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.7, 0]}>
+    <planeGeometry args={[20, 10]} />
+    <meshStandardMaterial color="#2563eb" transparent opacity={0.7} />
+  </mesh>
+)
+
+const EnvironmentScene: React.FC = () => {
+  // Place trees in a grid
+  const trees = []
+  for (let x = -4; x <= 4; x += 2) {
+    for (let z = -4; z <= 4; z += 2) {
+      trees.push(
+        <Float key={`tree-${x}-${z}`} speed={2 + Math.random()} rotationIntensity={0.3} floatIntensity={0.3}>
+          <Tree position={[x, 0, z]} />
+        </Float>
+      )
+    }
+  }
+  // Place clouds
+  const clouds = [
+    <Cloud key="cloud1" position={[-3, 4, -2]} />,
+    <Cloud key="cloud2" position={[2, 4.5, 2]} />,
+    <Cloud key="cloud3" position={[4, 3.5, -3]} />,
+  ]
   return (
     <group>
-      {buildings.map((building, index) => (
-        <Float key={index} speed={2 + Math.random() * 2} rotationIntensity={0.5} floatIntensity={0.5}>
-          <mesh position={building.position as [number, number, number]}>
-            <boxGeometry args={[0.5, building.height, 0.5]} />
-            <meshStandardMaterial color="#6366F1" emissive="#4F46E5" emissiveIntensity={0.2} />
-          </mesh>
-        </Float>
-      ))}
+      <Sun />
+      {clouds}
+      {trees}
+      <Water />
+      {/* Ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
         <planeGeometry args={[20, 20]} />
-        <meshStandardMaterial color="#1F2937" />
+        <meshStandardMaterial color="#1e293b" />
       </mesh>
     </group>
   )
@@ -67,11 +123,11 @@ const CityGrid: React.FC = () => {
 const Scene: React.FC = () => {
   return (
     <Canvas camera={{ position: [10, 8, 10], fov: 50 }}>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
+  <ambientLight intensity={0.8} />
+  <pointLight position={[10, 10, 10]} intensity={1.2} />
       <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} />
-      <Stars radius={100} depth={50} count={5000} factor={4} />
-      <CityGrid />
+      <Stars radius={100} depth={50} count={2500} factor={2.5} />
+      <EnvironmentScene />
       <AnimatedParticles />
     </Canvas>
   )

@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react'
+import { X, AlertCircle, AlertTriangle, Info } from 'lucide-react'
 import { Alert, useAlertStore } from '../../state/alertStore'
 
 interface ToastProps {
