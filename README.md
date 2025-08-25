@@ -1,3 +1,23 @@
+## Quick Start (Windows)
+
+1. Run `setup.bat` to set up Python and Node environments and install all dependencies:
+
+	```bat
+	setup.bat
+	```
+
+2. Run `start.bat` to launch both backend and frontend servers. This will:
+	- Activate the Python virtual environment
+	- Start the backend (FastAPI) and frontend (Vite) servers in background windows
+	- Open the site in your default browser automatically
+	- When you press any key in the main window, both servers will be stopped and all windows closed
+
+	```bat
+	start.bat
+	```
+
+You do not need to manually open terminals or kill server processes—everything is handled by the batch scripts.
+
 # Indradhanu — Urban Climate Dashboard
 
 Brief README for local development and quick reference.
@@ -35,21 +55,7 @@ npm install
 
 - `GEMINI_API_KEY` — API key used by the backend simulation (Gemini). Put it into a `.env` file at the repo root or set it in your environment.
 
-## Run locally
 
-Start backend (from `backend/`):
-
-```powershell
-cd backend
-uvicorn main:app --reload
-```
-
-Start frontend (from `frontend/`):
-
-```powershell
-cd frontend
-npm run dev
-```
 
 ## Key API endpoints
 
