@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+import { useThemeStore } from '../state/themeStore'
 import { api, SimulationParams, SimulationResults } from '../services/api'
 import { motion } from 'framer-motion'
 import { Play, Sliders, MapPin, Thermometer, Droplets } from 'lucide-react'
@@ -28,6 +29,17 @@ const Simulation: React.FC = () => {
   const [results, setResults] = useState<SimulationResults | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const reportRef = useRef<HTMLDivElement | null>(null)
+
+  const { isDark, toggleTheme } = useThemeStore()
+
+  // Update dark mode class on document root
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDark])
 
   const scenarios = [
     { id: 'heatwave', name: 'Heatwave', icon: Thermometer },
@@ -105,6 +117,14 @@ const Simulation: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 p-8">
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={toggleTheme}
+          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+        >
+          {isDark ? '🌙 Dark' : '☀️ Light'} Mode
+        </button>
+      </div>
       <div className="max-w-6xl mx-auto">
   <div ref={reportRef} className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
           <div>

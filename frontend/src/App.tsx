@@ -1,6 +1,8 @@
 // React import not required with new JSX transform
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Layout/Navbar'
+import { useThemeStore } from './state/themeStore'
+import { useEffect } from 'react'
 import { ToastContainer } from './components/UI/Toast'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
@@ -12,6 +14,14 @@ import About from './pages/About'
 import Contact from './pages/Contact'
 
 function App() {
+  const { isDark } = useThemeStore()
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDark])
   return (
     <Router>
       <div className="App">
