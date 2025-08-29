@@ -1,15 +1,16 @@
 @echo off
-REM Setup Python virtual environment and install backend dependencies
+REM Setup script for indradhanu project
+REM Create and activate Python virtual environment, then install backend dependencies
 cd backend
-python -m venv ..\.venv
-call ..\.venv\Scripts\activate.bat
+python -m venv .venv
+call .venv\Scripts\activate
 pip install --upgrade pip
-pip install fastapi uvicorn python-dotenv google-generativeai
-cd ..
+pip install -r requirements.txt
 
-REM Install frontend dependencies
+cd ..
+REM Install frontend Node.js dependencies
 cd frontend
-call npm install
+npm install
 cd ..
-
-echo Setup complete. Activate the venv and run start.bat to launch both servers.
+echo Setup complete.
+deactivate
