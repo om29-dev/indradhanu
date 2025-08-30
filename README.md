@@ -19,7 +19,7 @@ No manual terminal management required—everything is handled by the batch scri
 Indradhanu is a full-stack demo for urban climate resilience, featuring:
 - React + Vite frontend (UI, charts, export button)
 - FastAPI backend (simulation logic, API endpoints)
-- Gemini-powered or fallback climate simulation
+- Simulation (deterministic or fallback)
 - (PDF report generation is currently disabled)
 
 ## Indradhanu Project
@@ -82,21 +82,20 @@ indradhanu/
 - For Twilio/Firebase, add credentials to `.env` as needed.
 - For demo, simulated data flows are used; replace with real models/data as required.
 
-## Environment Variables
 
-- `GEMINI_API_KEY` — API key for Gemini simulation (add to `.env` in the main directory)
 
-## Gemini API Usage
+## Simulation behavior
 
-- The backend uses the Gemini API (Google Generative AI) to generate climate simulation results.
-- You must set the `GEMINI_API_KEY` environment variable (in your `.env` file at the project root) to enable Gemini-powered simulations.
-- The key is loaded by the backend and used in `backend/app/simulation.py` to call Gemini's `gemini-2.5-flash-lite` model.
-- If the API key is missing or Gemini returns invalid data, the backend will fall back to generating random simulation data.
-- No Gemini API calls are made from the frontend; all requests go through the backend.
+- The backend can generate simulation results using built-in deterministic or random generators.
+- No external LLM or Gemini integration is required or used by default. If external simulation integrations are added later, they will be documented here and controlled via the project's `.env` file.
 
 **Sample .env file:**
 ```
-GEMINI_API_KEY=your-google-gemini-api-key-here
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+MONGO_URI=mongodb://localhost:27017/
+TWILIO_ACCOUNT_SID=your_twilio_sid_here
+TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
+TWILIO_PHONE=your_twilio_phone_here
 ```
 
 ## Troubleshooting

@@ -5,13 +5,18 @@ import {
   AlertTriangle, 
   BarChart3, 
   Cpu, 
-  Map, 
   RefreshCw 
 } from 'lucide-react'
+// using Windy iframe for temperature overlay as requested
 
 const Dashboard: React.FC = () => {
-  const [uhiMap, setUhiMap] = useState<any>(null)
+  const [iframeKey, setIframeKey] = useState(0)
+  const [lat, setLat] = useState<number | null>(null)
+  const [lon, setLon] = useState<number | null>(null)
+  const [geoStatus, setGeoStatus] = useState<string>('locating')
+  const [oceanIframeKey, setOceanIframeKey] = useState(0)
   const [weather, setWeather] = useState<any>(null)
+  const [localCity, setLocalCity] = useState<string | null>(null)
   const [floodAlert, setFloodAlert] = useState<any>(null)
   const [hotspots, setHotspots] = useState<any[]>([])
   const [greenSim, setGreenSim] = useState<any[]>([])
@@ -19,11 +24,7 @@ const Dashboard: React.FC = () => {
   const [coolingStatus, setCoolingStatus] = useState<any>(null)
 
   useEffect(() => {
-    // Fetch UHI map
-    fetch('http://localhost:8000/api/uhimap')
-      .then(res => res.json())
-      .then(data => setUhiMap(data))
-      .catch(() => setUhiMap(null))
+  // (UHI geojson endpoint removed from UI) -- keep other fetches
     // Fetch weather
     fetch('http://localhost:8000/api/weather?city=Mumbai')
       .then(res => res.json())
@@ -42,7 +43,41 @@ const Dashboard: React.FC = () => {
       .then(res => res.json())
       .then(data => setEnergyForecast(data))
       .catch(() => setEnergyForecast(null))
+    // try to get user location for the Windy embed
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLat(pos.coords.latitude)
+          setLon(pos.coords.longitude)
+          setGeoStatus('current')
+          // fetch reverse geocode and weather for the user's coordinates
+          fetch(`http://localhost:8000/api/reverse-geocode?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+            .then(r => r.json())
+            .then(d => setLocalCity(d?.name ?? null))
+            .catch(() => setLocalCity(null))
+
+          fetch(`http://localhost:8000/api/weather-by-coords?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+            .then(r => r.json())
+            .then(d => setWeather(d))
+            .catch(() => {})
+        },
+        (_) => {
+          // fallback to default
+          setLat(17.202)
+          setLon(77.285)
+          setGeoStatus('default')
+        },
+        { enableHighAccuracy: false, timeout: 5000 }
+      )
+  } else {
+      setLat(17.202)
+      setLon(77.285)
+      setGeoStatus('unsupported')
+    }
   }, [])
+
+  // reload Windy iframe by changing key
+  const reloadIframe = () => setIframeKey(k => k + 1)
 
   const runGreenSim = () => {
     fetch('http://localhost:8000/api/green-simulate', {
@@ -90,10 +125,12 @@ const Dashboard: React.FC = () => {
               <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
                 <Activity className="text-green-600 dark:text-green-400" size={20} />
               </div>
-              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{typeof weather?.main?.temp !== 'undefined' ? `${weather.main.temp}K` : '...'}</span>
+              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{
+                typeof weather?.main?.temp === 'number' ? `${Math.round((weather.main.temp - 273.15) * 10) / 10}°C` : '...'
+              }</span>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              Weather (Mumbai)
+              Weather {localCity ? `(${localCity})` : '(Mumbai)'}
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-sm">
               {weather?.weather?.[0]?.description ?? 'Loading...'}
@@ -176,13 +213,30 @@ const Dashboard: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Urban Heat Island Map
                 </h2>
-                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <button
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  onClick={reloadIframe}
+                >
                   <RefreshCw size={16} />
                 </button>
               </div>
-              <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <Map size={48} className="text-gray-400" />
-                <span className="ml-2 text-gray-500">{uhiMap ? 'Hotspots loaded' : 'Heatmap visualization'}</span>
+              <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+                {/* Windy embed iframe (temperature overlay). This replaces OpenWeather tiles per user request. */}
+                <div className="h-full w-full">
+                  <iframe
+                    key={`windy-${iframeKey}`}
+                    title="Windy Temperature Map"
+                    src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=default&metricTemp=°C&metricWind=default&zoom=8&overlay=temp&product=ecmwf&level=surface&lat=${lat ?? 17.202}&lon=${lon ?? 77.285}&message=true`}
+                    style={{ width: '100%', height: '100%', border: 0 }}
+                    loading="lazy"
+                  />
+                  <div className="absolute left-4 bottom-4 bg-white/80 dark:bg-black/60 text-xs px-2 py-1 rounded">
+                    {geoStatus === 'locating' && 'Locating...'}
+                    {geoStatus === 'current' && 'Using your location'}
+                    {geoStatus === 'default' && 'Using default location'}
+                    {geoStatus === 'unsupported' && 'Geolocation unsupported'}
+                  </div>
+                </div>
               </div>
             </motion.div>
 
@@ -254,9 +308,21 @@ const Dashboard: React.FC = () => {
                   <div className="text-sm text-gray-600 dark:text-gray-300">Tide Level</div>
                 </div>
               </div>
-              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <BarChart3 size={32} className="text-gray-400" />
-                <span className="ml-2 text-gray-500">Ocean data chart</span>
+              <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden relative">
+                {/* Windy ocean/waves embed centered on user location */}
+                <iframe
+                  key={`ocean-${oceanIframeKey}`}
+                  title="Windy Ocean Map"
+                  src={`https://embed.windy.com/embed.html?type=map&location=coordinates&metricWind=default&zoom=6&overlay=waves&product=gfs&level=surface&lat=${lat ?? 17.202}&lon=${lon ?? 77.285}&message=true`}
+                  style={{ width: '100%', height: '100%', border: 0 }}
+                  loading="lazy"
+                />
+                <button
+                  className="absolute right-3 top-3 p-1 bg-white/80 dark:bg-black/60 rounded"
+                  onClick={() => setOceanIframeKey(k => k + 1)}
+                >
+                  <RefreshCw size={16} />
+                </button>
               </div>
             </motion.div>
 
