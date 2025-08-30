@@ -86,7 +86,7 @@ indradhanu/
 
 ## Simulation behavior
 
-- The backend can generate simulation results using built-in deterministic or random generators.
+- The backend can generate simulation results using built-in deterministic generators.
 - No external LLM or Gemini integration is required or used by default. If external simulation integrations are added later, they will be documented here and controlled via the project's `.env` file.
 
 **Sample .env file:**
