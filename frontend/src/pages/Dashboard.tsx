@@ -1,18 +1,74 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Activity, 
   AlertTriangle, 
   BarChart3, 
   Cpu, 
-  Map,
-  RefreshCw
+  Map, 
+  RefreshCw 
 } from 'lucide-react'
 
 const Dashboard: React.FC = () => {
+  const [uhiMap, setUhiMap] = useState<any>(null)
+  const [weather, setWeather] = useState<any>(null)
+  const [floodAlert, setFloodAlert] = useState<any>(null)
+  const [hotspots, setHotspots] = useState<any[]>([])
+  const [greenSim, setGreenSim] = useState<any[]>([])
+  const [energyForecast, setEnergyForecast] = useState<any>(null)
+  const [coolingStatus, setCoolingStatus] = useState<any>(null)
+
+  useEffect(() => {
+    // Fetch UHI map
+    fetch('http://localhost:8000/api/uhimap')
+      .then(res => res.json())
+      .then(data => setUhiMap(data))
+      .catch(() => setUhiMap(null))
+    // Fetch weather
+    fetch('http://localhost:8000/api/weather?city=Mumbai')
+      .then(res => res.json())
+      .then(data => setWeather(data))
+      .catch(() => setWeather(null))
+    // Fetch flood alert (if endpoint exists)
+    fetch('http://localhost:8000/api/floodalert')
+      .then(res => res.json())
+      .then(data => setFloodAlert(data))
+      .catch(() => setFloodAlert(null))
+    fetch('http://localhost:8000/api/hotspots')
+      .then(res => res.json())
+      .then(data => setHotspots(data))
+      .catch(() => setHotspots([]))
+    fetch('http://localhost:8000/api/energyforecast?city=Mumbai')
+      .then(res => res.json())
+      .then(data => setEnergyForecast(data))
+      .catch(() => setEnergyForecast(null))
+  }, [])
+
+  const runGreenSim = () => {
+    fetch('http://localhost:8000/api/green-simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Simulation failed')
+        return res.json()
+      })
+      .then(data => setGreenSim(Array.isArray(data) ? data : []))
+      .catch(() => setGreenSim([]))
+  }
+
+  const activateCooling = (zone: string) => {
+    fetch(`http://localhost:8000/api/cooling-control?zone=${encodeURIComponent(zone)}&activate=true`, {
+      method: 'POST',
+    })
+      .then(res => res.json())
+      .then(data => setCoolingStatus(data))
+      .catch(() => setCoolingStatus(null))
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -30,17 +86,17 @@ const Dashboard: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
           >
-            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4">
               <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
                 <Activity className="text-green-600 dark:text-green-400" size={20} />
               </div>
-              <span className="text-2xl font-bold text-green-600 dark:text-green-400">98%</span>
+              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{typeof weather?.main?.temp !== 'undefined' ? `${weather.main.temp}K` : '...'}</span>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              System Operational
+              Weather (Mumbai)
             </h3>
             <p className="text-gray-600 dark:text-gray-300 text-sm">
-              All systems running normally
+              {weather?.weather?.[0]?.description ?? 'Loading...'}
             </p>
           </motion.div>
 
@@ -94,13 +150,13 @@ const Dashboard: React.FC = () => {
               <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
                 <BarChart3 className="text-purple-600 dark:text-purple-400" size={20} />
               </div>
-              <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">2.4MW</span>
+              <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">{typeof energyForecast?.forecast?.peak_demand !== 'undefined' ? `${energyForecast.forecast.peak_demand}MW` : '...'}</span>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
               Energy Production
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">
-              +12% from yesterday
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
+              {energyForecast?.forecast?.trend ?? '+12% from yesterday'}
             </p>
           </motion.div>
         </div>
@@ -126,24 +182,53 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                 <Map size={48} className="text-gray-400" />
-                <span className="ml-2 text-gray-500">Heatmap visualization</span>
+                <span className="ml-2 text-gray-500">{uhiMap ? 'Hotspots loaded' : 'Heatmap visualization'}</span>
               </div>
             </motion.div>
 
-            {/* Energy Harvesting Widget */}
+            {/* Hotspots Widget */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.45 }}
               className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
             >
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Energy Production
+                Heat Pockets
               </h2>
-              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <BarChart3 size={48} className="text-gray-400" />
-                <span className="ml-2 text-gray-500">Energy chart visualization</span>
-              </div>
+              <ul>
+                {hotspots.filter(Boolean).map(h => (
+                  <li key={h?.zone ?? Math.random()} className="mb-2">
+                    <span className="font-bold">{h?.zone ?? 'unknown'}</span> — {typeof h?.temp !== 'undefined' ? `${h.temp}°C` : 'N/A'} ({h?.type ?? '—'})
+                    <button className="ml-2 px-2 py-1 bg-blue-500 text-white rounded" onClick={() => h?.zone && activateCooling(h.zone)} disabled={!h?.zone}>
+                      Activate Cooling
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {coolingStatus && <div className="mt-2 text-green-600">{coolingStatus.zone} cooling system activated!</div>}
+            </motion.div>
+
+            {/* Green Simulation Widget */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.46 }}
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Green Simulation
+              </h2>
+              <button className="mb-2 px-4 py-2 bg-green-600 text-white rounded" onClick={runGreenSim}>
+                Run Simulation
+              </button>
+              <ul>
+                {greenSim.filter(Boolean).map((sim) => (
+                  <li key={sim?.zone ?? Math.random()} className="mb-2">
+                    <span className="font-bold">{sim?.zone ?? 'unknown'}</span>: {typeof sim?.original_temp !== 'undefined' ? `${sim.original_temp}°C` : 'N/A'} → {typeof sim?.simulated_temp !== 'undefined' ? `${sim.simulated_temp}°C` : 'N/A'}, CO₂ reduction: {sim?.co2_reduction ?? '—'}kg/year
+                  </li>
+                ))}
+              </ul>
             </motion.div>
           </div>
 
@@ -195,6 +280,21 @@ const Dashboard: React.FC = () => {
                 <button className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg transition-colors">
                   Dispatch Drones
                 </button>
+              </div>
+            </motion.div>
+
+            {/* Flood Alert Widget */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Flood Alert
+              </h2>
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                <span className="ml-2 text-gray-500">{floodAlert ? floodAlert.risk : 'No data'}</span>
               </div>
             </motion.div>
           </div>

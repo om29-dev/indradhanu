@@ -7,9 +7,8 @@
 	- This will create a Python virtual environment, install backend and frontend dependencies.
 
 2. **Start:**
-	- Double-click or run `start.bat`.
-	- This will activate the virtual environment, start backend and frontend servers in background windows, and open the site in your browser.
-	- When you press any key in the main window, both servers will be stopped automatically.
+  - Double-click or run `start.bat`.
+  - This will start the backend and frontend servers in separate background windows.
 
 No manual terminal management required—everything is handled by the batch scripts.
 
@@ -23,11 +22,65 @@ Indradhanu is a full-stack demo for urban climate resilience, featuring:
 - Gemini-powered or fallback climate simulation
 - (PDF report generation is currently disabled)
 
-## Directory Structure
+## Indradhanu Project
 
-- `frontend/` — React + TypeScript (Vite)
-- `backend/` — FastAPI server
-- `backend/app/` — backend package (`models.py`, `simulation.py`)
+### Overview
+A modular climate resilience platform with AI/ML backend (FastAPI) and interactive frontend (React).
+
+### Setup Instructions
+
+#### 1. Environment Variables
+All API keys and secrets are managed in a single `.env` file in the project root:
+```
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+MONGO_URI=mongodb://localhost:27017/
+TWILIO_ACCOUNT_SID=your_twilio_sid_here
+TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
+TWILIO_PHONE=your_twilio_phone_here
+```
+
+#### 2. Install Dependencies
+Run the setup script:
+```
+setup.bat
+```
+This installs Python and Node.js dependencies for backend and frontend.
+
+#### 3. Start Servers
+Run the start script:
+```
+start.bat
+```
+This launches both backend (FastAPI) and frontend (React) servers.
+
+- Backend: http://localhost:8000
+- Frontend: http://localhost:5173
+
+#### 4. Connecting Frontend to Backend
+The frontend communicates with the backend using these endpoints (examples):
+- `GET /uhi-heatmap` — returns UHI heatmap points
+- `POST /simulation` — run a climate simulation (JSON body)
+- `GET /analytics?metrics=...` — time series analytics
+- `POST /contact` — submit contact form
+
+#### 5. Project Structure
+```
+indradhanu/
+  .env
+  setup.bat
+  start.bat
+  README.md
+  backend/
+    ...
+  frontend/
+    ...
+```
+
+#### 6. Notes
+- All sensitive keys are loaded from `.env` using `python-dotenv`.
+- Remove any `.env` files from subfolders; only use the root `.env`.
+- For Twilio/Firebase, add credentials to `.env` as needed.
+- For demo, simulated data flows are used; replace with real models/data as required.
 
 ## Environment Variables
 

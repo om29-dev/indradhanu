@@ -70,8 +70,8 @@ const About: React.FC = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
         <div className="text-center mb-16">
           <motion.h1 
@@ -79,7 +79,7 @@ const About: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4"
           >
-            About Climate Resilience Grid
+            About Urban Climate Shield Network (UCSN)
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}

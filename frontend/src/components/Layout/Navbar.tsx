@@ -22,21 +22,21 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <div className="h-8 w-8 bg-blue-500 rounded-md flex items-center justify-center text-white font-bold mr-2">
-                CR
+              <div className="h-8 w-12 bg-blue-500 rounded-md flex items-center justify-center text-white font-bold mr-2 text-sm">
+                UCSN
               </div>
               <span className="font-bold text-xl text-blue-600 dark:text-blue-400">
-                Climate Resilience
+                Urban Climate Shield Network
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center md:ml-12 space-x-6">
             {navigation.map((item) => (
               <Link
                 key={item.name}

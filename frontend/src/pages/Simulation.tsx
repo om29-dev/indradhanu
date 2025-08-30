@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { useThemeStore } from '../state/themeStore'
+import React, { useState, useRef } from 'react'
 import { api, SimulationParams, SimulationResults } from '../services/api'
 import { motion } from 'framer-motion'
 import { Play, Sliders, MapPin, Thermometer, Droplets } from 'lucide-react'
@@ -30,16 +29,7 @@ const Simulation: React.FC = () => {
   const [isRunning, setIsRunning] = useState(false)
   const reportRef = useRef<HTMLDivElement | null>(null)
 
-  const { isDark, toggleTheme } = useThemeStore()
-
-  // Update dark mode class on document root
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDark])
+  // Theme toggle removed for this page; global theme is handled in Navbar
 
   const scenarios = [
     { id: 'heatwave', name: 'Heatwave', icon: Thermometer },
@@ -54,7 +44,7 @@ const Simulation: React.FC = () => {
       const res = await api.runSimulation(params)
 
       // normalize time series data: support either number[] or {hour,value}[]
-      const normalize = (arr: any[]) => {
+      const normalize = (arr?: any[] | undefined) => {
         if (!arr || !arr.length) return []
         if (typeof arr[0] === 'number') return arr.map((v: number, i: number) => ({ hour: i, value: Math.round(v * 10) / 10 }))
         if (typeof arr[0] === 'object' && 'hour' in arr[0] && 'value' in arr[0]) return arr.map((o: any) => ({ hour: o.hour, value: Math.round(o.value * 10) / 10 }))
@@ -66,10 +56,10 @@ const Simulation: React.FC = () => {
         inundationArea: normalize(res.inundationArea) as unknown as any,
         aqiData: normalize(res.aqiData) as unknown as any,
         humidityData: normalize(res.humidityData) as unknown as any,
-        maxTemperature: Math.round(res.maxTemperature * 10) / 10,
-        maxInundation: Math.round(res.maxInundation * 10) / 10,
-        maxAQI: Math.round(res.maxAQI),
-        maxHumidity: Math.round(res.maxHumidity),
+  maxTemperature: Math.round((res.maxTemperature ?? 0) * 10) / 10,
+  maxInundation: Math.round((res.maxInundation ?? 0) * 10) / 10,
+  maxAQI: Math.round(res.maxAQI ?? 0),
+  maxHumidity: Math.round(res.maxHumidity ?? 0),
         waterloggingRisk: res.waterloggingRisk
       }
 
@@ -116,16 +106,9 @@ const Simulation: React.FC = () => {
   // Simulation is run only when the user clicks the "Run Simulation" button.
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 p-8">
-      <div className="flex justify-end mb-4">
-        <button
-          onClick={toggleTheme}
-          className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-        >
-          {isDark ? '🌙 Dark' : '☀️ Light'} Mode
-        </button>
-      </div>
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+  {/* mode toggle removed */}
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
   <div ref={reportRef} className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
           <div>
             <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
@@ -139,19 +122,19 @@ const Simulation: React.FC = () => {
             {results && (
               <div className="flex gap-4">
                 <div className="bg-blue-100 dark:bg-blue-900/30 rounded-lg px-4 py-2 text-center">
-                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{Math.round(results.maxTemperature)}°C</div>
+                  <div className="text-lg font-bold text-blue-700 dark:text-blue-400">{Math.round(results.maxTemperature ?? 0)}°C</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Max Temp</div>
                 </div>
                 <div className="bg-green-100 dark:bg-green-900/30 rounded-lg px-4 py-2 text-center">
-                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{Math.round(results.maxInundation)} km²</div>
+                  <div className="text-lg font-bold text-green-700 dark:text-green-400">{Math.round(results.maxInundation ?? 0)} km²</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Max Inundation</div>
                 </div>
                 <div className="bg-yellow-100 dark:bg-yellow-900/30 rounded-lg px-4 py-2 text-center">
-                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{Math.round(results.maxAQI)}</div>
+                  <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">{Math.round(results.maxAQI ?? 0)}</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Max AQI</div>
                 </div>
                 <div className="bg-cyan-100 dark:bg-cyan-900/30 rounded-lg px-4 py-2 text-center">
-                  <div className="text-lg font-bold text-cyan-700 dark:text-cyan-400">{Math.round(results.maxHumidity)}%</div>
+                  <div className="text-lg font-bold text-cyan-700 dark:text-cyan-400">{Math.round(results.maxHumidity ?? 0)}%</div>
                   <div className="text-xs text-gray-600 dark:text-gray-300">Max Humidity</div>
                 </div>
                 <div className="bg-purple-100 dark:bg-purple-900/30 rounded-lg px-4 py-2 text-center">
@@ -265,18 +248,18 @@ const Simulation: React.FC = () => {
                     {params.scenario === 'sea_level_surge' && <Droplets size={84} className="text-cyan-500" />}
                   </div>
 
-                  <div className="mt-4 w-full md:w-48 space-y-2">
+                    <div className="mt-4 w-full md:w-48 space-y-2">
                     <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
                       <div className="text-sm text-gray-700 dark:text-gray-300">Max Temp</div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxTemperature) + '°C' : '—'}</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxTemperature ?? 0) + '°C' : '—'}</div>
                     </div>
                     <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
                       <div className="text-sm text-gray-700 dark:text-gray-300">Inundation</div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxInundation) + ' km²' : '—'}</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxInundation ?? 0) + ' km²' : '—'}</div>
                     </div>
                     <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 p-2 rounded-md">
                       <div className="text-sm text-gray-700 dark:text-gray-300">AQI</div>
-                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxAQI) : '—'}</div>
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">{results ? Math.round(results.maxAQI ?? 0) : '—'}</div>
                     </div>
                   </div>
                 </div>
@@ -285,12 +268,12 @@ const Simulation: React.FC = () => {
                   <p className="text-lg text-gray-700 dark:text-gray-300">
                     {results ? (
                       params.scenario === 'heatwave' ?
-                        `Peak ${Math.round(results.maxTemperature)}°C with AQI ${Math.round(results.maxAQI)} and humidity around ${Math.round(results.maxHumidity)}%.` :
+                        `Peak ${Math.round(results.maxTemperature ?? 0)}°C with AQI ${Math.round(results.maxAQI ?? 0)} and humidity around ${Math.round(results.maxHumidity ?? 0)}%.` :
                         params.scenario === 'flash_flood' ?
-                        `Maximum inundation estimated at ${Math.round(results.maxInundation)} km². Waterlogging risk: ${results.waterloggingRisk}.` :
+                        `Maximum inundation estimated at ${Math.round(results.maxInundation ?? 0)} km². Waterlogging risk: ${results.waterloggingRisk}.` :
                         params.scenario === 'cyclone' ?
-                        `Expected strong winds (see input) and local impacts. AQI: ${Math.round(results.maxAQI)}.` :
-                        `Estimated inundation ${Math.round(results.maxInundation)} km² with RH ${Math.round(results.maxHumidity)}%.`
+                        `Expected strong winds (see input) and local impacts. AQI: ${Math.round(results.maxAQI ?? 0)}.` :
+                        `Estimated inundation ${Math.round(results.maxInundation ?? 0)} km² with RH ${Math.round(results.maxHumidity ?? 0)}%.`
                     ) : (
                       'Run the simulation to see an impact summary and quick recommendations.'
                     )}
@@ -301,7 +284,7 @@ const Simulation: React.FC = () => {
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mt-2 overflow-hidden">
                       <div
                         className="h-3 bg-gradient-to-r from-yellow-400 to-red-600"
-                        style={{ width: `${results ? Math.min(100, Math.round(results.maxTemperature)) : 6}%` }}
+                        style={{ width: `${results ? Math.min(100, Math.round(results.maxTemperature ?? 0)) : 6}%` }}
                       />
                     </div>
                     <div className="flex justify-between text-xs text-gray-500 mt-2">

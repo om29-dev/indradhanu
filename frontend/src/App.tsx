@@ -24,9 +24,9 @@ function App() {
   }, [isDark])
   return (
     <Router>
-      <div className="App">
+      <div className="App flex flex-col min-h-screen">
         <Navbar />
-        <main>
+        <main className="flex-1">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />

@@ -43,19 +43,19 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+  <section className="relative h-screen flex items-center justify-center overflow-hidden py-8">
         <div className="absolute inset-0 z-0">
           <Scene />
         </div>
-        <div className="relative z-10 text-center text-white px-4 max-w-4xl">
-       <motion.h1 
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.8 }}
-  className="text-5xl md:text-7xl font-bold mb-6 text-blue-600"
->
-  AI-Powered Climate Resilience
-</motion.h1>
+  <div className="relative z-10 text-center text-white px-4 w-full max-w-4xl mx-auto py-8">
+      <motion.h1 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="text-5xl md:text-7xl font-bold mb-6 text-blue-600"
+      >
+        Urban Climate Shield Network (UCSN)
+      </motion.h1>
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
