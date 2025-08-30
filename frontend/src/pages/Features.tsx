@@ -144,12 +144,40 @@ const Features: React.FC = () => {
           </p>
           
           <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 h-64 flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <div className="w-16 h-16 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Brain size={32} />
+            <div className="text-center text-gray-500 w-full">
+              <div className="mx-auto mb-3" style={{maxWidth: 560}}>
+                {/* Small inline system architecture SVG diagram (non-critical, decorative)
+                    Keeps everything local so no external assets are required. */}
+                <svg viewBox="0 0 800 240" width="100%" height="160" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System architecture diagram">
+                  <defs>
+                    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+                      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb" />
+                    </marker>
+                  </defs>
+                  <rect x="20" y="20" width="160" height="80" rx="8" fill="#e0f2fe" stroke="#bfdbfe" />
+                  <text x="100" y="65" textAnchor="middle" fontSize="14" fill="#075985">Sensors / IoT</text>
+
+                  <rect x="220" y="10" width="200" height="100" rx="8" fill="#ecfccb" stroke="#bbf7d0" />
+                  <text x="320" y="55" textAnchor="middle" fontSize="14" fill="#14532d">Edge & AI Hub</text>
+
+                  <rect x="460" y="20" width="200" height="80" rx="8" fill="#f0f9ff" stroke="#dbeafe" />
+                  <text x="560" y="65" textAnchor="middle" fontSize="14" fill="#0f172a">Control & Actuation</text>
+
+                  <line x1="180" y1="60" x2="220" y2="60" stroke="#2563eb" strokeWidth="2" markerEnd="url(#arrow)" />
+                  <line x1="420" y1="60" x2="460" y2="60" stroke="#2563eb" strokeWidth="2" markerEnd="url(#arrow)" />
+
+                  {/* small legend */}
+                  <g transform="translate(20,132)">
+                    <rect x="0" y="0" width="18" height="12" fill="#e0f2fe" stroke="#bfdbfe" rx="2"/>
+                    <text x="28" y="10" fontSize="12" fill="#475569">Sensors</text>
+                    <rect x="140" y="0" width="18" height="12" fill="#ecfccb" stroke="#bbf7d0" rx="2"/>
+                    <text x="170" y="10" fontSize="12" fill="#475569">AI Hub</text>
+                    <rect x="300" y="0" width="18" height="12" fill="#f0f9ff" stroke="#dbeafe" rx="2"/>
+                    <text x="330" y="10" fontSize="12" fill="#475569">Actuation</text>
+                  </g>
+                </svg>
               </div>
-              <p>System Architecture Diagram</p>
-              <p className="text-sm">Visualization of how all components integrate</p>
+              <p className="text-sm">System architecture: sensors feed the AI hub which coordinates control systems and interventions</p>
             </div>
           </div>
         </motion.div>

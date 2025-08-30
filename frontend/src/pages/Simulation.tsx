@@ -10,8 +10,13 @@ const Simulation: React.FC = () => {
   const placeTrees = async () => {
     setStatus('Placing trees...')
     // default: try to place 200 trees with 50km min spacing
-    const res = mapRef.current?.addRandomTrees(200, 50000)
-    setStatus(`Placed ${res?.placed ?? 0} trees (attempts: ${res?.attempted ?? 0})`)
+    try {
+  const res = mapRef.current ? await mapRef.current.addRandomTrees(200, 50000) : undefined
+  setStatus(`Placed ${res?.placed ?? 0} trees`)
+    } catch (err) {
+      console.error('placeTrees failed', err)
+      setStatus('Failed to place trees')
+    }
   }
 
   const clearTrees = () => {

@@ -1,6 +1,7 @@
 // React import not required with new JSX transform
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Navbar from './components/Layout/Navbar'
+import ScrollToTop from './components/Layout/ScrollToTop'
 import { useThemeStore } from './state/themeStore'
 import { useEffect } from 'react'
 import { ToastContainer } from './components/UI/Toast'
@@ -25,6 +26,7 @@ function App() {
   return (
     <Router>
       <div className="App flex flex-col min-h-screen">
+  <ScrollToTop />
         <Navbar />
         <main className="flex-1">
           <Routes>

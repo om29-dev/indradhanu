@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
                 {/* Windy embed iframe (temperature overlay). This replaces OpenWeather tiles per user request. */}
-                <div className="h-full w-full">
+          <div className="relative h-full w-full">
                   <iframe
                     key={`windy-${iframeKey}`}
                     title="Windy Temperature Map"
@@ -230,7 +230,8 @@ const Dashboard: React.FC = () => {
                     style={{ width: '100%', height: '100%', border: 0 }}
                     loading="lazy"
                   />
-                  <div className="absolute left-4 bottom-4 bg-white/80 dark:bg-black/60 text-xs px-2 py-1 rounded">
+            {/* Visual mask removed for top-right controls to avoid covering map UI */}
+            <div className="absolute left-4 bottom-4 bg-white/80 dark:bg-black/60 text-xs px-2 py-1 rounded z-20">
                     {geoStatus === 'locating' && 'Locating...'}
                     {geoStatus === 'current' && 'Using your location'}
                     {geoStatus === 'default' && 'Using default location'}
@@ -252,7 +253,7 @@ const Dashboard: React.FC = () => {
               </h2>
               <ul>
                 {hotspots.filter(Boolean).map(h => (
-                  <li key={h?.zone ?? Math.random()} className="mb-2">
+                  <li key={h?.zone ?? Math.random()} className="mb-2 text-gray-900 dark:text-white">
                     <span className="font-bold">{h?.zone ?? 'unknown'}</span> — {typeof h?.temp !== 'undefined' ? `${h.temp}°C` : 'N/A'} ({h?.type ?? '—'})
                     <button className="ml-2 px-2 py-1 bg-blue-500 text-white rounded" onClick={() => h?.zone && activateCooling(h.zone)} disabled={!h?.zone}>
                       Activate Cooling
@@ -278,7 +279,7 @@ const Dashboard: React.FC = () => {
               </button>
               <ul>
                 {greenSim.filter(Boolean).map((sim) => (
-                  <li key={sim?.zone ?? Math.random()} className="mb-2">
+                  <li key={sim?.zone ?? Math.random()} className="mb-2 text-gray-900 dark:text-white">
                     <span className="font-bold">{sim?.zone ?? 'unknown'}</span>: {typeof sim?.original_temp !== 'undefined' ? `${sim.original_temp}°C` : 'N/A'} → {typeof sim?.simulated_temp !== 'undefined' ? `${sim.simulated_temp}°C` : 'N/A'}, CO₂ reduction: {sim?.co2_reduction ?? '—'}kg/year
                   </li>
                 ))}
@@ -317,8 +318,10 @@ const Dashboard: React.FC = () => {
                   style={{ width: '100%', height: '100%', border: 0 }}
                   loading="lazy"
                 />
+                {/* bottom-left mask to hide Windy watermark; pointer-events-none keeps iframe interactive */}
+                <div className="absolute left-3 bottom-3 w-40 h-6 bg-white dark:bg-gray-800 rounded pointer-events-none z-10" />
                 <button
-                  className="absolute right-3 top-3 p-1 bg-white/80 dark:bg-black/60 rounded"
+                  className="absolute right-3 top-3 p-1 bg-white/80 dark:bg-black/60 rounded z-20"
                   onClick={() => setOceanIframeKey(k => k + 1)}
                 >
                   <RefreshCw size={16} />
@@ -360,7 +363,7 @@ const Dashboard: React.FC = () => {
                 Flood Alert
               </h2>
               <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                <span className="ml-2 text-gray-500">{floodAlert ? floodAlert.risk : 'No data'}</span>
+                <span className="ml-2 text-gray-500 dark:text-gray-300">{floodAlert ? floodAlert.risk : 'No data'}</span>
               </div>
             </motion.div>
           </div>
