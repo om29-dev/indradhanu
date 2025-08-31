@@ -86,6 +86,75 @@ const Features: React.FC = () => {
     }
   ]
 
+  // Lightweight, dependency-free visualization used inside the feature modal.
+  // Renders a small deterministic IoT grid where each cell color is computed
+  // from the feature title so the visualization is consistent per feature.
+  const GridVisualization: React.FC<{ title: string }> = ({ title }) => {
+    const rows = 6
+    const cols = 12
+    const cellSize = 18
+    const gap = 8
+    const padding = 10
+    const width = cols * cellSize + (cols - 1) * gap + padding * 2
+    const height = rows * cellSize + (rows - 1) * gap + padding * 2 + 30
+
+    const computeValue = (r: number, c: number) => {
+      // deterministic pseudo-value derived from title so each feature looks distinct
+      const t = title.length
+      const v = (Math.sin((r + 1) * 0.6 + t * 0.13) + Math.cos((c + 1) * 0.4 + t * 0.07)) * 0.5 + 0.5
+      return Math.max(0, Math.min(1, v))
+    }
+
+    const colorFor = (v: number) => {
+      // simple green->yellow->red mapping
+      const r = Math.round(Math.min(255, 255 * Math.max(0, (v - 0.5) * 2)))
+      const g = Math.round(Math.min(255, 255 * (1 - Math.abs(v - 0.5) * 2)))
+      const b = 60
+      return `rgb(${r},${g},${b})`
+    }
+
+    const [hover, setHover] = useState<{ r: number; c: number; v: number } | null>(null)
+
+    return (
+      <div className="w-full flex items-center justify-center">
+        <svg width="100%" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${title} grid visualization`}>
+          {Array.from({ length: rows }).map((_, r) =>
+            Array.from({ length: cols }).map((__, c) => {
+              const v = computeValue(r, c)
+              const x = padding + c * (cellSize + gap)
+              const y = padding + r * (cellSize + gap)
+              return (
+                <g key={`${r}-${c}`}>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={cellSize}
+                    height={cellSize}
+                    rx={4}
+                    fill={colorFor(v)}
+                    stroke="rgba(0,0,0,0.06)"
+                    onMouseEnter={() => setHover({ r, c, v })}
+                    onMouseLeave={() => setHover(null)}
+                    style={{ cursor: 'default' }}
+                  />
+                </g>
+              )
+            })
+          )}
+
+          {hover && (
+            <g>
+              <rect x={padding} y={height - 28} width={width - padding * 2} height={22} rx={6} fill="rgba(0,0,0,0.6)" />
+              <text x={width / 2} y={height - 12} textAnchor="middle" fontSize={12} fill="#fff">
+                {`Sensor ${hover.r + 1},${hover.c + 1}: ${(hover.v * 100).toFixed(0)}%`}
+              </text>
+            </g>
+          )}
+        </svg>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -224,10 +293,10 @@ const Features: React.FC = () => {
                       </button>
                     </div>
 
-                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg h-48 mb-6 flex items-center justify-center">
-                      <div className="text-center text-gray-500">
-                        <p>Feature visualization</p>
-                        <p className="text-sm">Diagram or image of {feature.title}</p>
+                    <div className="bg-gray-100 dark:bg-gray-700 rounded-lg mb-6 flex items-center justify-center p-4">
+                      <div className="text-center text-gray-500 w-full">
+                        <GridVisualization title={feature.title} />
+                        <p className="text-sm mt-2">Diagram or image of {feature.title}</p>
                       </div>
                     </div>
 
